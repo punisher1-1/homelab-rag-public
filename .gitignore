@@ -1,0 +1,16 @@
+# Secrets — NEVER commit these
+.env
+**/.env
+
+# Python
+.venv/
+**/__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Local corpora / data
+pdfs/
+**/pdfs/

@@ -1,0 +1,12 @@
+services:
+  paradedb-rag-api:
+    build: .
+    container_name: paradedb-rag-api
+    env_file: .env
+    ports:
+      - "8100:8100"
+    restart: unless-stopped
+    # AppArmor-in-LXC note: if the container fails to start with an exit-243 /
+    # AppArmor error (same gotcha as the ai-frontend LXC), uncomment:
+    # security_opt:
+    #   - apparmor=unconfined

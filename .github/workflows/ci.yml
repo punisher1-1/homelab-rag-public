@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Python tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            paradedb-personal-rag/requirements.txt
+            paradedb-rag-api/requirements.txt
+            rag-reviewer/requirements.txt
+
+      - name: Install test dependencies
+        run: >-
+          python -m pip install --disable-pip-version-check
+          "pyyaml>=6.0" "requests>=2.32,<3"
+          "psycopg[binary]>=3.2" "python-dotenv>=1.0"
+          "pymupdf>=1.24" "fonttools>=4.50"
+          -r rag-reviewer/requirements.txt
+
+      - name: Compile Python sources
+        run: python -m compileall -q paradedb-personal-rag paradedb-rag-api
+
+      - name: Test manifest validation
+        working-directory: paradedb-personal-rag
+        run: python -m unittest -v test_corpus_manifest.py test_parse_check.py test_ingest_repair.py test_code_lines.py test_it_collection.py test_markdown_fences.py
+
+      - name: Test reviewer lifecycle services
+        run: python -m unittest discover -s rag-reviewer -p "test_*.py" -v
+
+      - name: Test gateway provenance guard
+        working-directory: paradedb-rag-api
+        run: python test_guard.py
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"

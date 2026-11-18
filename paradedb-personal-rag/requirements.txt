@@ -1,0 +1,10 @@
+# Python dependencies for the ParadeDB personal RAG pipeline.
+# Install into a virtual environment (see README.md).
+
+psycopg[binary]>=3.3.6      # PostgreSQL driver (talks to ParadeDB)
+requests>=2.34.2            # calls the Ollama embedding endpoint
+pymupdf4llm>=2.0       # extracts clean markdown text from PDFs (pulls in PyMuPDF)
+python-dotenv>=1.2.4        # loads secrets from the .env file
+python-docx>=1.2.0           # OPTIONAL — only needed for .docx reference documents
+pyyaml>=6.0.3                # eval.py reads the golden question set from YAML
+fonttools>=4.68.0            # code_lines.py decodes code fonts that have no ToUnicode map

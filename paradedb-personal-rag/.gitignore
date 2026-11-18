@@ -1,0 +1,18 @@
+# Never commit secrets or the virtual environment
+.env
+.venv/
+__pycache__/
+*.pyc
+pdfs/
+
+# Drop zone: keep the folder structure + README, never the documents themselves
+dropzone/*
+!dropzone/README.md
+!dropzone/*/
+dropzone/*/*
+!dropzone/*/.gitkeep
+
+# Eval: the example set is committed, your real one + run results are not
+evalset.yaml
+evalset-payroll.yaml
+runs/

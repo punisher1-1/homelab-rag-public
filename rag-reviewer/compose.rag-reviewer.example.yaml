@@ -1,0 +1,100 @@
+# Example compose overlay for the reviewer. Copy it next to n8n's docker-compose.yml,
+# replace the *-host names and /opt/n8n paths with your own, and create the secret files.
+services:
+  rag-reviewer:
+    build:
+      context: /opt/n8n/rag-reviewer-src
+      dockerfile: rag-reviewer/Dockerfile
+    container_name: rag-reviewer
+    restart: unless-stopped
+    environment:
+      RAG_ROOT: /data/rag-store
+      REVIEWER_API_KEY_FILE: /run/secrets/reviewer_api_key
+      REBUILD_API_KEY_FILE: /run/secrets/rebuild_api_key
+      DB_HOST: paradedb-host
+      DB_PORT: "5432"
+      DB_NAME: myragdatabase
+      DB_USER: ragapp
+      DB_PASSWORD_FILE: /run/secrets/paradedb_password
+      OLLAMA_URL: http://embed-host:11434
+      EMBED_MODEL: bge-m3:latest
+      EMBED_DIM: "1024"
+      RAG_LAB: home
+      # Only n8n form links on this origin are accepted into the approval inbox.
+      N8N_FORM_ORIGIN: http://n8n-host:5678
+      DROP_DIR: /data/rag-store/documents/approved
+      DOCLING_URL: http://docling-serve:5001
+      DOCLING_API_KEY_FILE: /run/secrets/docling_api_key
+      DOCLING_IMAGE: quay.io/docling-project/docling-serve-cpu:v1.38.2
+      DOCLING_REQUEST_TIMEOUT: "7300"
+    secrets:
+      - reviewer_api_key
+      - rebuild_api_key
+      - paradedb_password
+      - docling_api_key
+    volumes:
+      - /mnt/rag-files/rag-store:/data/rag-store:rw
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      docling-serve:
+        condition: service_healthy
+
+  docling-serve:
+    image: quay.io/docling-project/docling-serve-cpu:v1.38.2
+    container_name: docling-serve
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        export DOCLING_SERVE_API_KEY="$$(cat /run/secrets/docling_api_key)";
+        exec docling-serve run
+    environment:
+      UVICORN_HOST: 0.0.0.0
+      UVICORN_PORT: "5001"
+      UVICORN_WORKERS: "1"
+      DOCLING_DEVICE: cpu
+      DOCLING_NUM_THREADS: "6"
+      DOCLING_SERVE_ENG_KIND: local
+      DOCLING_SERVE_ENG_LOC_NUM_WORKERS: "1"
+      DOCLING_SERVE_ENABLE_UI: "false"
+      DOCLING_SERVE_ENABLE_REMOTE_SERVICES: "false"
+      DOCLING_SERVE_ALLOW_EXTERNAL_PLUGINS: "false"
+      DOCLING_SERVE_LOAD_MODELS_AT_BOOT: "true"
+      DOCLING_SERVE_MAX_SYNC_WAIT: "7200"
+      DOCLING_SERVE_MAX_DOCUMENT_TIMEOUT: "7200"
+      DOCLING_SERVE_MAX_FILE_SIZE: "268435456"
+      DOCLING_SERVE_MAX_NUM_PAGES: "2000"
+      DOCLING_SERVE_SINGLE_USE_RESULTS: "true"
+      DOCLING_SERVE_LOG_FORMAT: json
+    secrets:
+      - docling_api_key
+    group_add:
+      - "1000"
+    mem_limit: 10g
+    cpus: 6.0
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --header=\"X-Api-Key: $$(cat /run/secrets/docling_api_key)\" -O /dev/null http://127.0.0.1:5001/version || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+secrets:
+  reviewer_api_key:
+    file: /opt/n8n/reviewer-api.key
+  rebuild_api_key:
+    file: /opt/n8n/rebuild-api.key
+  paradedb_password:
+    file: /opt/n8n/paradedb-password
+  docling_api_key:
+    file: /opt/n8n/docling-api.key

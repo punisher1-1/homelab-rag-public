@@ -1,0 +1,8 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.32,<1
+psycopg[binary]>=3.2,<4
+requests>=2.32,<3
+python-dotenv>=1.0,<2
+pyyaml>=6.0,<7
+pymupdf>=1.26,<2
+fonttools>=4.50,<5
