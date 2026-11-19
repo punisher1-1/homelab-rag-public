@@ -156,16 +156,33 @@ def is_denied(path: pathlib.Path) -> bool:
     return any(pat.lower() in p for pat in RAG_DENYLIST)
 
 
-def lab_for(path: pathlib.Path, meta: dict) -> str:
+def parse_lab_folders(raw: str) -> list[tuple[str, str]]:
+    """RAG_LAB_FOLDERS: comma-separated `folder name=lab` pairs, for example
+    `Work Project=work,Network Team=netops`. A note under a folder with that name
+    (any depth, case-insensitive) gets that lab tag. Kept in .env so the code
+    carries no deployment names."""
+    rules = []
+    for item in raw.split(","):
+        folder, sep, lab = item.partition("=")
+        folder, lab = folder.strip().strip("/").lower(), lab.strip().lower()
+        if sep and folder and lab:
+            rules.append((f"/{folder}/", lab))
+    return rules
+
+
+RAG_LAB_FOLDERS = parse_lab_folders(os.environ.get("RAG_LAB_FOLDERS", ""))
+
+
+def lab_for(path: pathlib.Path, meta: dict, rules=None) -> str:
     """Provenance/scope tag (the production 'stamp source at ingestion' step).
-    Explicit frontmatter `lab:` wins; otherwise inferred from the folder so you
-    never hand-tag files. Extend the folder rules as new sources (e.g. the
-    network team's data) are added."""
+    Explicit frontmatter `lab:` wins; otherwise inferred from the folder rules in
+    RAG_LAB_FOLDERS so you never hand-tag files; anything else is `home`."""
     if meta.get("lab"):
         return meta["lab"].strip().lower()
     p = str(path).lower()
-    if "/lja local ai project/" in p:
-        return "lja"
+    for fragment, lab in (RAG_LAB_FOLDERS if rules is None else rules):
+        if fragment in p:
+            return lab
     return "home"
 
 
@@ -1058,7 +1075,7 @@ def write_chunks(conn, src, title, doc_type, records, doc_meta):
     for i in range(0, len(texts), EMBED_BATCH):
         vectors.extend(embed_batch(texts[i:i + EMBED_BATCH]))
 
-    # Stamp WHICH MODEL produced each vector. Per the LJA embedder bake-off
+    # Stamp WHICH MODEL produced each vector. Per the work-lab embedder bake-off
     # decision (2026-06-20): "store model name + dimension as metadata on every
     # vector so future-you knows what generated it." Without this, a corpus
     # half-embedded with bge-m3 and half with Qwen3 is silently broken and

@@ -22,7 +22,7 @@ that came from the name of the folder it happened to sit in. That is enough for
    never see Maine. No reranker fixes that — a cross-encoder can only reorder
    candidates, and the right chunks were never candidates.
 
-2. **A folder convention is not portable.** Hand `dropzone/` to an LJA clone or
+2. **A folder convention is not portable.** Hand `dropzone/` to another deployment or
    a client and the semantics live only in this repo's `ingest.py`. A manifest
    travels WITH the documents, so the corpus describes itself.
 

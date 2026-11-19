@@ -48,7 +48,7 @@ jobs:
 
       - name: Test manifest validation
         working-directory: paradedb-personal-rag
-        run: python -m unittest -v test_corpus_manifest.py test_parse_check.py test_ingest_repair.py test_code_lines.py test_it_collection.py test_markdown_fences.py
+        run: python -m unittest -v test_corpus_manifest.py test_parse_check.py test_ingest_repair.py test_code_lines.py test_it_collection.py test_markdown_fences.py test_lab_folders.py
 
       - name: Test reviewer lifecycle services
         run: python -m unittest discover -s rag-reviewer -p "test_*.py" -v
